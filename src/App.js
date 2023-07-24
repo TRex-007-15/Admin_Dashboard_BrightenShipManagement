@@ -1,10 +1,10 @@
 import React from 'react';
 import { Layout, Menu, Avatar } from 'antd';
-import { UserOutlined, TeamOutlined, FileOutlined, InboxOutlined } from '@ant-design/icons';
+import { UserOutlined, TeamOutlined, FileOutlined } from '@ant-design/icons';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import logo from './logo.jpg';
 import Resume from './pages/Resume'
-import FormPage from './pages/FormPage';
+import CrewPage from './pages/CrewPage';
 
 const { Header, Sider, Content } = Layout;
 
@@ -16,13 +16,8 @@ const Sidebar = () => {
       <Menu.Item key="/pages/Resume" icon={<FileOutlined />}>
         <Link to="/pages/Resume">Resume</Link>
       </Menu.Item>
-      <Menu.Item key="/pages/FormPage" icon={<TeamOutlined />}>
-        <Link to="/pages/FormPage">Crew</Link>
-      </Menu.Item>
-      <Menu.Item key="/shipments-management.html" icon={<InboxOutlined />}>
-        <a href="/shipments-management.html" target="_blank" rel="noopener noreferrer">
-          Shipments
-        </a>
+      <Menu.Item key="/pages/CrewPage" icon={<TeamOutlined/>}>
+       <Link to="/pages/CrewPage">Crew</Link>
       </Menu.Item>
     </Menu>
   );
@@ -53,7 +48,7 @@ const Dashboard = () => {
             <Routes>
               {/* Other routes */}
               <Route path="/pages/Resume" element={<Resume />} />
-              <Route path="/pages/FormPage" element={<FormPage />} />
+              <Route path="/pages/CrewPage" element={<CrewPage/>}/>
             </Routes>
           </Content>
         </Layout>
