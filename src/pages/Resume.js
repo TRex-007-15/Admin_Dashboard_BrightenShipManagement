@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Space, Table, Input, Select } from 'antd';
+import { Button, Space, Table, Input, Select, Upload, message } from 'antd';
+import { InboxOutlined } from '@ant-design/icons';
+
+const { Dragger } = Upload;
 
 const Resume = () => {
   const [filteredInfo, setFilteredInfo] = useState({});
@@ -22,34 +25,10 @@ const Resume = () => {
           gender: 'Male',
           address: '123 Main St',
           designation: 'Captain',
+          cv: '',
+          editable: false,
         },
-        {
-          key: '2',
-          name: 'Jim Green',
-          age: 42,
-          email: 'jim@example.com',
-          gender: 'Male',
-          address: '456 Park Ave',
-          designation: 'First Mate',
-        },
-        {
-          key: '3',
-          name: 'Joe Black',
-          age: 28,
-          email: 'joe@example.com',
-          gender: 'Male',
-          address: '789 Broadway',
-          designation: 'Deckhand',
-        },
-        {
-          key: '4',
-          name: 'Jim Red',
-          age: 35,
-          email: 'jimred@example.com',
-          gender: 'Male',
-          address: '321 Elm St',
-          designation: 'Engineer',
-        },
+        // Add more sample data as needed...
       ]);
     }
   }, []);
@@ -60,7 +39,6 @@ const Resume = () => {
   }, [data]);
 
   const handleChange = (pagination, filters, sorter) => {
-    console.log('Various parameters', pagination, filters, sorter);
     setFilteredInfo(filters);
     setSortedInfo(sorter);
   };
@@ -79,6 +57,53 @@ const Resume = () => {
       order: 'descend',
       columnKey: 'age',
     });
+  };
+
+  const handleAddRow = () => {
+    const newRow = {
+      key: Date.now().toString(),
+      name: 'New Person',
+      age: 0,
+      email: '',
+      gender: '',
+      address: '',
+      designation: '',
+      cv: '',
+      editable: true,
+    };
+
+    setData((prevData) => [...prevData, newRow]);
+  };
+
+  const handleEditRow = (key) => {
+    const updatedData = data.map((row) =>
+      row.key === key ? { ...row, editable: true } : row
+    );
+    setData(updatedData);
+  };
+
+  const handleSaveRow = (key) => {
+    const updatedData = data.map((row) =>
+      row.key === key ? { ...row, editable: false } : row
+    );
+    setData(updatedData);
+  };
+
+  const handleCancelEdit = (key) => {
+    let updatedData;
+    if (key === 'Date.now()') {
+      updatedData = data.filter((row) => row.key !== key);
+    } else {
+      updatedData = data.map((row) =>
+        row.key === key ? { ...row, editable: false } : row
+      );
+    }
+    setData(updatedData);
+  };
+
+  const handleDeleteRow = (key) => {
+    const updatedData = data.filter((row) => row.key !== key);
+    setData(updatedData);
   };
 
   const columns = [
@@ -199,6 +224,33 @@ const Resume = () => {
         ),
     },
     {
+      title: 'CV',
+      dataIndex: 'cv',
+      key: 'cv',
+      ellipsis: true,
+      render: (_, record) =>
+        record.editable ? (
+          <Dragger
+            beforeUpload={(file) => {
+              // Perform file upload or validation logic here
+              // For now, we'll just show a message when a file is selected
+              message.success(`${file.name} file selected`);
+              return false; // Prevent default upload behavior
+            }}
+          >
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text">Click or drag file to this area to upload</p>
+            <p className="ant-upload-hint">Support for a single or bulk upload.</p>
+          </Dragger>
+        ) : (
+          <a href={record.cv} download>
+            Download CV
+          </a>
+        ),
+    },
+    {
       title: 'Actions',
       dataIndex: 'actions',
       key: 'actions',
@@ -220,57 +272,9 @@ const Resume = () => {
     },
   ];
 
-  const handleAddRow = () => {
-    const newRow = {
-      key: Date.now().toString(),
-      name: 'New Person',
-      age: 0,
-      email: '', // Include the 'email' field for the new row
-      gender: '',
-      address: '',
-      designation: '',
-      editable: true,
-    };
-
-    setData((prevData) => [...prevData, newRow]);
-  };
-
-  const handleEditRow = (key, updatedRow) => {
-    const updatedData = data.map((row) =>
-      row.key === key ? { ...row, ...updatedRow } : row
-    );
-    setData(updatedData);
-  };
-
-  const handleSaveRow = (key) => {
-    const updatedData = data.map((row) => (row.key === key ? { ...row, editable: false } : row));
-    setData(updatedData);
-  };
-
-  const handleCancelEdit = (key) => {
-    // If the 'key' is 'Date.now()', it means this is a new row that hasn't been saved, so we remove it
-    let updatedData = data;
-    if (key === 'Date.now()') {
-      updatedData = data.filter((row) => row.key !== key);
-    } else {
-      // Otherwise, set the 'editable' flag to false for the existing row
-      updatedData = data.map((row) => (row.key === key ? { ...row, editable: false } : row));
-    }
-    setData(updatedData);
-  };
-
-  const handleDeleteRow = (key) => {
-    const updatedData = data.filter((row) => row.key !== key);
-    setData(updatedData);
-  };
-
   return (
     <>
-      <Space
-        style={{
-          marginBottom: 16,
-        }}
-      >
+      <Space style={{ marginBottom: 16 }}>
         <Button onClick={setAgeSort}>Sort age</Button>
         <Button onClick={clearFilters}>Clear filters</Button>
         <Button onClick={clearAll}>Clear filters and sorters</Button>
