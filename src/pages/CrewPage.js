@@ -1,47 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, Input, Select, Button, Modal, Form, InputNumber } from 'antd';
+import { ref, push, update, remove, onValue } from 'firebase/database';
+import { db,app} from "./firebaseConfig";
 const { Option } = Select;
+
 
 const CrewPage = () => {
   const [visible, setVisible] = useState(false);
   const [form] = Form.useForm();
-  const [crewMembersData, setCrewMembersData] = useState([
-    {
-      key: '1',
-      name: 'John Doe',
-      designation: 'Captain',
-      nationality: 'USA',
-      joiningDate: '2023-05-10',
-      email: 'john.doe@example.com',
-      address: '123 Main St, New York',
-      gender: 'Male',
-      age: 40,
-    },
-    {
-      key: '2',
-      name: 'Jane Smith',
-      designation: 'First Officer',
-      nationality: 'UK',
-      joiningDate: '2023-06-15',
-      email: 'jane.smith@example.com',
-      address: '456 Oak Ave, London',
-      gender: 'Female',
-      age: 35,
-    },
-    {
-      key: '3',
-      name: 'Michael Johnson',
-      designation: 'Engineer',
-      nationality: 'Canada',
-      joiningDate: '2023-07-20',
-      email: 'michael.johnson@example.com',
-      address: '789 Elm St, Toronto',
-      gender: 'Male',
-      age: 28,
-    },
-  ]);
-
+  const [crewMembersData, setCrewMembersData] = useState([]);
   const [editingKey, setEditingKey] = useState('');
+
+  useEffect(() => {
+    fetchCrewMembers();
+  }, []);
+
+  const fetchCrewMembers = () => {
+    onValue(ref(db, 'crewMembers'), (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const crewDataArray = Object.entries(data).map(([key, value]) => ({ key, ...value }));
+        setCrewMembersData(crewDataArray);
+      }
+    });
+  };
 
   const showModal = () => {
     setVisible(true);
@@ -52,23 +34,10 @@ const CrewPage = () => {
       form.resetFields();
       setVisible(false);
       if (editingKey !== '') {
-        // Editing an existing crew member
-        setCrewMembersData((prevData) =>
-          prevData.map((item) =>
-            item.key === editingKey ? { ...item, ...values } : item
-          )
-        );
+        update(ref(db, `crewMembers/${editingKey}`), values);
         setEditingKey('');
       } else {
-        // Adding a new crew member
-        const newKey = (crewMembersData.length + 1).toString();
-        setCrewMembersData((prevData) => [
-          ...prevData,
-          {
-            key: newKey,
-            ...values,
-          },
-        ]);
+        push(ref(db, 'crewMembers'), values);
       }
     });
   };
@@ -86,9 +55,23 @@ const CrewPage = () => {
   };
 
   const handleDelete = (key) => {
-    // Filter out the crew member with the specified key
-    const updatedData = crewMembersData.filter((item) => item.key !== key);
-    setCrewMembersData(updatedData);
+    remove(ref(db, `crewMembers/${key}`))
+      .then(() => {
+        console.log('Delete successful!');
+        const index = findIndexByKey(key);
+        if (index !== -1) {
+          const updatedData = [...crewMembersData];
+          updatedData.splice(index, 1);
+          setCrewMembersData(updatedData);
+        }
+      })
+      .catch((error) => {
+        console.log('Delete failed:', error.message);
+      });
+  }
+
+  const findIndexByKey = (key) => {
+    return crewMembersData.findIndex((item) => item.key === key);
   };
 
   const columns = [
@@ -117,6 +100,9 @@ const CrewPage = () => {
       title: 'Joining Date',
       dataIndex: 'joiningDate',
       key: 'joiningDate',
+      render: (joiningDate) => (
+        <span title={joiningDate}>{joiningDate}</span>
+      ),
     },
     {
       title: 'Email Address',
@@ -138,6 +124,23 @@ const CrewPage = () => {
       dataIndex: 'age',
       key: 'age',
       sorter: (a, b) => a.age - b.age,
+    },
+    {
+      title: 'Certificate Type',
+      dataIndex: 'certificateType',
+      key: 'certificateType',
+      filters: [
+        { text: 'COC', value: 'COC' },
+        { text: 'COP', value: 'COP' },
+        { text: 'COOK COC', value: 'COOK COC' },
+        { text: 'Other', value: 'Other' },
+      ],
+      onFilter: (value, record) => record.certificateType === value,
+    },
+    {
+      title: 'Certificate Number',
+      dataIndex: 'certificateNumber',
+      key: 'certificateNumber',
     },
     {
       title: 'Action',
@@ -168,7 +171,6 @@ const CrewPage = () => {
         onChange={(pagination, filters, sorter) => console.log(sorter)}
       />
 
-      {/* Modal for adding/editing crew member */}
       <Modal
         title={editingKey ? 'Edit Crew Member' : 'Add New Crew Member'}
         visible={visible}
@@ -193,8 +195,8 @@ const CrewPage = () => {
           <Form.Item name="nationality" label="Nationality">
             <Input />
           </Form.Item>
-          <Form.Item name="joiningDate" label="Joining Date">
-            <Input />
+          <Form.Item name="joiningDate" label="Joining Date" rules={[{ required: true }]}>
+            <Input placeholder="DD-MM-YYYY" />
           </Form.Item>
           <Form.Item name="email" label="Email Address">
             <Input />
@@ -207,6 +209,17 @@ const CrewPage = () => {
           </Form.Item>
           <Form.Item name="age" label="Age">
             <InputNumber />
+          </Form.Item>
+          <Form.Item name="certificateType" label="Certificate Type">
+            <Select>
+              <Option value="COC">COC</Option>
+              <Option value="COP">COP</Option>
+              <Option value="COOK COC">COOK COC</Option>
+              <Option value="Other">Other</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="certificateNumber" label="Certificate Number">
+            <Input />
           </Form.Item>
         </Form>
       </Modal>
