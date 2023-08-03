@@ -1,42 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Space, Table, Input, Select, Upload, message } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { Button, Space, Table, Input, Select,Modal,Form} from 'antd';
+import {db} from "./firebaseConfig";
+import {get,ref,remove,update} from "firebase/database"
+import { getStorage, ref as storageRef, deleteObject } from "firebase/storage";
 
-const { Dragger } = Upload;
-
+const { Option } = Select;
 const Resume = () => {
+  
   const [filteredInfo, setFilteredInfo] = useState({});
   const [sortedInfo, setSortedInfo] = useState({});
   const [data, setData] = useState([]);
-
-  // Load data from local storage on initial render
-  useEffect(() => {
-    const savedData = localStorage.getItem('resumeData');
-    if (savedData) {
-      setData(JSON.parse(savedData));
-    } else {
-      // If no data found in local storage, initialize with sample data
-      setData([
-        {
-          key: '1',
-          name: 'John Brown',
-          age: 32,
-          email: 'john@example.com',
-          gender: 'Male',
-          address: '123 Main St',
-          designation: 'Captain',
-          cv: '',
-          editable: false,
-        },
-        // Add more sample data as needed...
-      ]);
-    }
-  }, []);
-
-  // Save data to local storage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('resumeData', JSON.stringify(data));
-  }, [data]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentEditedRowData, setCurrentEditedRowData] = useState({});
+  const [editableRows, setEditableRows] = useState({}); // Add this line
+  const [editedRowData, setEditedRowData] = useState({});
 
   const handleChange = (pagination, filters, sorter) => {
     setFilteredInfo(filters);
@@ -52,59 +29,6 @@ const Resume = () => {
     setSortedInfo({});
   };
 
-  const setAgeSort = () => {
-    setSortedInfo({
-      order: 'descend',
-      columnKey: 'age',
-    });
-  };
-
-  const handleAddRow = () => {
-    const newRow = {
-      key: Date.now().toString(),
-      name: 'New Person',
-      age: 0,
-      email: '',
-      gender: '',
-      address: '',
-      designation: '',
-      cv: '',
-      editable: true,
-    };
-
-    setData((prevData) => [...prevData, newRow]);
-  };
-
-  const handleEditRow = (key) => {
-    const updatedData = data.map((row) =>
-      row.key === key ? { ...row, editable: true } : row
-    );
-    setData(updatedData);
-  };
-
-  const handleSaveRow = (key) => {
-    const updatedData = data.map((row) =>
-      row.key === key ? { ...row, editable: false } : row
-    );
-    setData(updatedData);
-  };
-
-  const handleCancelEdit = (key) => {
-    let updatedData;
-    if (key === 'Date.now()') {
-      updatedData = data.filter((row) => row.key !== key);
-    } else {
-      updatedData = data.map((row) =>
-        row.key === key ? { ...row, editable: false } : row
-      );
-    }
-    setData(updatedData);
-  };
-
-  const handleDeleteRow = (key) => {
-    const updatedData = data.filter((row) => row.key !== key);
-    setData(updatedData);
-  };
 
   const columns = [
     {
@@ -115,140 +39,89 @@ const Resume = () => {
       sortOrder: sortedInfo.columnKey === 'name' ? sortedInfo.order : null,
       ellipsis: true,
       render: (_, record) =>
-        record.editable ? (
-          <Input
-            value={record.name}
-            onChange={(e) => handleEditRow(record.key, { name: e.target.value })}
-          />
-        ) : (
-          record.name
-        ),
+        <div>
+          {record.name}
+        </div>
     },
-    {
-      title: 'Age',
-      dataIndex: 'age',
-      key: 'age',
-      sorter: (a, b) => a.age - b.age,
-      sortOrder: sortedInfo.columnKey === 'age' ? sortedInfo.order : null,
-      ellipsis: true,
-      render: (_, record) =>
-        record.editable ? (
-          <Input
-            type="number"
-            value={record.age}
-            onChange={(e) => handleEditRow(record.key, { age: parseInt(e.target.value, 10) || 0 })}
-          />
-        ) : (
-          record.age
-        ),
-    },
+    
     {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
       ellipsis: true,
       render: (_, record) =>
-        record.editable ? (
-          <Input
-            value={record.email}
-            onChange={(e) => handleEditRow(record.key, { email: e.target.value })}
-          />
-        ) : (
-          record.email
-        ),
+      <div>
+      {record.email}
+
+    </div>
     },
     {
-      title: 'Gender',
-      dataIndex: 'gender',
-      key: 'gender',
-      sorter: (a, b) => a.gender.localeCompare(b.gender),
-      sortOrder: sortedInfo.columnKey === 'gender' ? sortedInfo.order : null,
-      filters: [
-        { text: 'Male', value: 'Male' },
-        { text: 'Female', value: 'Female' },
-      ],
-      filteredValue: filteredInfo.gender || null,
-      onFilter: (value, record) => record.gender === value,
+      title: 'Phone No.',
+      dataIndex: 'phone',
+      key: 'phone',
       ellipsis: true,
       render: (_, record) =>
-        record.editable ? (
-          <Select
-            value={record.gender}
-            onChange={(value) => handleEditRow(record.key, { gender: value })}
-          >
-            <Select.Option value="Male">Male</Select.Option>
-            <Select.Option value="Female">Female</Select.Option>
-          </Select>
-        ) : (
-          record.gender
-        ),
-    },
+          record.phone
+    },  
     {
-      title: 'Address',
-      dataIndex: 'address',
-      key: 'address',
-      ellipsis: true,
-      render: (_, record) =>
-        record.editable ? (
-          <Input
-            value={record.address}
-            onChange={(e) => handleEditRow(record.key, { address: e.target.value })}
-          />
-        ) : (
-          record.address
-        ),
-    },
-    {
-      title: 'Designation',
-      dataIndex: 'designation',
-      key: 'designation',
-      sorter: (a, b) => a.designation.localeCompare(b.designation),
-      sortOrder: sortedInfo.columnKey === 'designation' ? sortedInfo.order : null,
+      title: 'Rank',
+      dataIndex: 'rank',
+      key: 'rank',
+      sorter: (a, b) => a.rank.localeCompare(b.rank),
+      sortOrder: sortedInfo.columnKey === 'rank' ? sortedInfo.order : null,
       filters: [
         { text: 'Captain', value: 'Captain' },
         { text: 'First Mate', value: 'First Mate' },
         { text: 'Deckhand', value: 'Deckhand' },
         { text: 'Engineer', value: 'Engineer' },
       ],
-      filteredValue: filteredInfo.designation || null,
-      onFilter: (value, record) => record.designation.includes(value),
+      filteredValue: filteredInfo.rank || null,
+      onFilter: (value, record) => record.rank.includes(value),
       ellipsis: true,
       render: (_, record) =>
-        record.editable ? (
-          <Input
-            value={record.designation}
-            onChange={(e) => handleEditRow(record.key, { designation: e.target.value })}
-          />
-        ) : (
-          record.designation
-        ),
+          record.rank,
     },
     {
-      title: 'CV',
-      dataIndex: 'cv',
-      key: 'cv',
+      title: 'Resume',
+      dataIndex: 'resume',
+      key: 'resume',
+      ellipsis: true,
+      render: resume => (
+        <a href={resume} target="_blank" rel="noopener noreferrer">
+          View Resume
+        </a>
+      ),
+    },
+    {
+      title: 'Certificate Type',
+      dataIndex: 'certificate',
+      key: 'certificate',
+      sorter: (a, b) => a.rank.localeCompare(b.certificate),
+      sortOrder: sortedInfo.columnKey === 'certificate' ? sortedInfo.order : null,
+      filters: [
+        { text: 'COC', value: 'COC' },
+        { text: 'Watchkeeping', value: 'Watchkeeping' },
+        { text: 'COOK COC', value: 'COOK COC' },
+        { text: 'COP', value: 'COP' },
+        { text: 'Other', value: 'Other' },
+      ],
+      filteredValue: filteredInfo.certificate || null,
+      onFilter: (value, record) => record.certificate.includes(value),
       ellipsis: true,
       render: (_, record) =>
-        record.editable ? (
-          <Dragger
-            beforeUpload={(file) => {
-              // Perform file upload or validation logic here
-              // For now, we'll just show a message when a file is selected
-              message.success(`${file.name} file selected`);
-              return false; // Prevent default upload behavior
-            }}
-          >
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined />
-            </p>
-            <p className="ant-upload-text">Click or drag file to this area to upload</p>
-            <p className="ant-upload-hint">Support for a single or bulk upload.</p>
-          </Dragger>
-        ) : (
-          <a href={record.cv} download>
-            Download CV
-          </a>
-        ),
+          record.certificate
+        
+    },
+    {
+      title: 'INDOS No',
+      dataIndex: 'indos',
+      key: 'indos',
+      sorter: (a, b) => a.name.localeCompare(b.indos),
+      sortOrder: sortedInfo.columnKey === 'indos' ? sortedInfo.order : null,
+      ellipsis: true,
+      render: (_, record) =>
+          record.indos
+  
     },
     {
       title: 'Actions',
@@ -256,30 +129,95 @@ const Resume = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          {record.editable ? (
-            <>
-              <Button type="primary" onClick={() => handleSaveRow(record.key)}>
-                Save
-              </Button>
-              <Button onClick={() => handleCancelEdit(record.key)}>Cancel</Button>
-            </>
-          ) : (
-            <Button onClick={() => handleEditRow(record.key)}>Edit</Button>
-          )}
-          <Button onClick={() => handleDeleteRow(record.key)}>Delete</Button>
+          <Button onClick={() => handleDeleteRow(record.key, record.resume)}>Delete</Button>
         </Space>
       ),
-    },
+    },  
   ];
 
+
+  
+  useEffect(() => {
+    const usersRef = ref(db, "userFormData"); 
+
+    get(usersRef)
+      .then((snapshot) => {
+        console.log("Snapshot exists:", snapshot.exists());
+        if (snapshot.exists()) {
+          
+          console.log("Fetched data:",data);
+          const usersArray = [];
+
+
+          snapshot.forEach((childSnapshot) => {
+            const user = childSnapshot.val();
+            console.log("Fetched data from Firebase:", data);
+            const userId = childSnapshot.key;
+            usersArray.push({
+              key: userId,
+              name: user.name,
+              email: user.email, 
+              resume: user.resumeURL, 
+              rank: user.rank,
+              phone:user.phoneNo, 
+              indos:user.indosNo,
+              certificate:user.certificateType,
+            });
+          });
+          
+          
+          console.log("Parsed data for the table:", usersArray);
+          setData(usersArray);
+        }else{
+          console.log("No data found in Firebase.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+      });
+  }, []);
+
+
+
+  const handleDeleteRow = (key, resume) => {
+    console.log("Deleting row with key:", key);
+    console.log("Resume URL:", resume);
+
+    const usersRef = ref(db, "userFormData/" + key);
+  
+    remove(usersRef)
+      .then(() => {
+        console.log("Data deleted successfully from Firebase.");
+  
+        if (resume) {
+          console.log("Deleting file with URL:", resume);
+          const storage = getStorage();
+          const resumeRef = storageRef(storage, resume);
+          console.log(resumeRef);
+
+          deleteObject(resumeRef)
+            .then(() => {
+              console.log("File deleted successfully from Firebase Storage.");
+            })
+            .catch((error) => {
+              console.error("Error deleting file from Firebase Storage:", error);
+            });
+        }
+        const updatedData = data.filter((row) => row.key !== key);
+        setData(updatedData);
+      })
+      .catch((error) => {
+        console.error("Error deleting data:", error);
+      });
+  };
+  
   return (
     <>
       <Space style={{ marginBottom: 16 }}>
-        <Button onClick={setAgeSort}>Sort age</Button>
         <Button onClick={clearFilters}>Clear filters</Button>
         <Button onClick={clearAll}>Clear filters and sorters</Button>
-        <Button onClick={handleAddRow}>Add Row</Button>
       </Space>
+      
       <Table columns={columns} dataSource={data} onChange={handleChange} />
     </>
   );
