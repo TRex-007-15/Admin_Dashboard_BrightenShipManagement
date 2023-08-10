@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Select, Button, Modal, Form, InputNumber } from 'antd';
+import { Table, Input, Select, Button, Modal, Form, InputNumber,DatePicker} from 'antd';
 import { ref, push, update, remove, onValue } from 'firebase/database';
 import { db,app} from "./firebaseConfig";
+import moment from 'moment';
 const { Option } = Select;
-
+const dateFormat = 'YYYY/MM/DD';
 
 const CrewPage = () => {
   const [visible, setVisible] = useState(false);
   const [form] = Form.useForm();
-  const [crewMembersData, setCrewMembersData] = useState([]);
+  const [crewMembersData, setCrewMembersData] = useState([]);                                                                     
   const [editingKey, setEditingKey] = useState('');
 
   useEffect(() => {
@@ -37,7 +38,15 @@ const CrewPage = () => {
         update(ref(db, `crewMembers/${editingKey}`), values);
         setEditingKey('');
       } else {
-        push(ref(db, 'crewMembers'), values);
+        const formattedValues = {
+          ...values,
+          joiningDate: moment(values.joiningDate).format(dateFormat), // Format using Moment.js
+        };
+  
+        push(ref(db, 'crewMembers'), formattedValues)
+          .catch((error) => {
+            console.log('Push failed:', error.message);
+          });
       }
     });
   };
@@ -196,7 +205,7 @@ const CrewPage = () => {
             <Input />
           </Form.Item>
           <Form.Item name="joiningDate" label="Joining Date" rules={[{ required: true }]}>
-            <Input placeholder="DD-MM-YYYY" />
+            <input type="date" name="joiningDate" id="joiningDate" className="ant-input" />
           </Form.Item>
           <Form.Item name="email" label="Email Address">
             <Input />
